@@ -127,6 +127,8 @@ cp wifi_config.json.example wifi_config.json
 # E depois: Tools → ESP32 Sketch Data Upload
 ```
 
+ou siga instruções: https://randomnerdtutorials.com/arduino-ide-2-install-esp32-littlefs/
+
 ### 3. Configure o App Android
 
 ```bash
