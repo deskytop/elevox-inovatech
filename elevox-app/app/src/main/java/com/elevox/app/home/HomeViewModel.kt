@@ -1,5 +1,7 @@
 package com.elevox.app.home
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.elevox.app.data.CommandRepository
@@ -35,20 +37,30 @@ data class HomeUiState(
 }
 
 class HomeViewModel(
+	context: Context,
 	private val repository: CommandRepository = CommandRepository()
 ) : ViewModel() {
 
 	private val _state = MutableStateFlow(HomeUiState())
 	val state: StateFlow<HomeUiState> = _state
 
+	private val prefs: SharedPreferences = context.getSharedPreferences("elevox_settings", Context.MODE_PRIVATE)
+
+	companion object {
+		private const val AUTO_DETECTION_KEY = "auto_detection_enabled"
+		private const val MANUAL_FLOOR_KEY = "manual_floor"
+	}
+
 	init {
+		// Carrega andar inicial das configurações
+		loadCurrentFloorFromSettings()
 		startFloorDetection()
 
 		// PARA TESTAR: Descomente uma das linhas abaixo para simular diferentes cenários
-		// Cenário 1: Pessoa no Térreo, Elevador no Térreo (mesma posição - card azul)
+		// Cenário 1: Pessoa no Térreo, Elevador no Térreo (mesma posição)
 		// _state.value = _state.value.copy(currentFloorNumeric = 0, elevatorFloorNumeric = 0)
 
-		// Cenário 2: Pessoa no 1° andar, Elevador no Térreo (posições diferentes - card escuro clicável)
+		// Cenário 2: Pessoa no 1° andar, Elevador no Térreo (posições diferentes)
 		// _state.value = _state.value.copy(currentFloorNumeric = 1, elevatorFloorNumeric = 0)
 
 		// Cenário 3: Pessoa no 2° andar, Elevador no 3° andar
@@ -56,15 +68,34 @@ class HomeViewModel(
 	}
 
 	/**
+	 * Carrega o andar atual das configurações do SharedPreferences
+	 */
+	private fun loadCurrentFloorFromSettings() {
+		val manualFloor = prefs.getInt(MANUAL_FLOOR_KEY, 0)
+		_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
+	}
+
+	/**
 	 * Inicia a detecção contínua do andar atual em background
-	 * Por enquanto, simula a detecção. Futuramente pode usar sensores/beacons.
+	 * Lê as configurações do SharedPreferences a cada 2 segundos
 	 */
 	private fun startFloorDetection() {
 		viewModelScope.launch {
 			while (isActive) {
-				// TODO: Implementar detecção real de andar usando sensores/beacons
-				// Por enquanto, mantém o valor atual
-				delay(5000) // Verifica a cada 5 segundos
+				// Lê configurações do SharedPreferences
+				val autoDetectionEnabled = prefs.getBoolean(AUTO_DETECTION_KEY, true)
+				val manualFloor = prefs.getInt(MANUAL_FLOOR_KEY, 0)
+
+				if (autoDetectionEnabled) {
+					// TODO: Implementar detecção Bluetooth no futuro
+					// Por enquanto usa o valor manual mesmo com auto-detection ativado
+					_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
+				} else {
+					// Modo manual: usa o andar configurado
+					_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
+				}
+
+				delay(2000) // Verifica a cada 2 segundos
 			}
 		}
 	}
@@ -116,6 +147,13 @@ class HomeViewModel(
 	 */
 	fun updateElevatorFloor(floor: Int) {
 		_state.value = _state.value.copy(elevatorFloorNumeric = floor)
+	}
+
+	/**
+	 * Limpa a última mensagem exibida (Snackbar)
+	 */
+	fun clearLastMessage() {
+		_state.value = _state.value.copy(lastMessage = null)
 	}
 }
 

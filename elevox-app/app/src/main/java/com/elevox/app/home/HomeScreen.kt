@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,10 +48,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+	viewModel: HomeViewModel = viewModel(),
+	onSettingsClick: () -> Unit = {}
+) {
 	val state by viewModel.state.collectAsState()
 	val snackbarHostState = remember { SnackbarHostState() }
 
+	// Limpa a mensagem quando a tela é recomposta (volta das configurações)
+	LaunchedEffect(Unit) {
+		viewModel.clearLastMessage()
+	}
+
+	// Mostra Snackbar quando há nova mensagem
 	LaunchedEffect(state.lastMessage) {
 		state.lastMessage?.let { snackbarHostState.showSnackbar(it) }
 	}
@@ -73,7 +83,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 		) {
 			// Botão de configurações no topo direito
 			IconButton(
-				onClick = { /* TODO: Abrir configurações */ },
+				onClick = onSettingsClick,
 				modifier = Modifier
 					.align(Alignment.TopEnd)
 					.padding(16.dp)
@@ -110,29 +120,23 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 							.fillMaxWidth()
 							.padding(vertical = 28.dp),
 						horizontalAlignment = Alignment.CenterHorizontally,
-						verticalArrangement = Arrangement.spacedBy(4.dp)
+						verticalArrangement = Arrangement.spacedBy(12.dp)
 					) {
 						Text(
-							text = "ANDAR ATUAL:",
-							color = Color(0xFF8B9BB3),
-							fontSize = 13.sp,
-							fontWeight = FontWeight.Medium,
-							letterSpacing = 0.5.sp
+							text = "ANDAR ATUAL",
+							color = Color(0xFFD0DDEC),
+							fontSize = 16.sp,
+							fontWeight = FontWeight.Bold,
+							letterSpacing = 1.5.sp
 						)
+
+						// Exibe apenas o número/nome do andar
 						Text(
 							text = state.currentFloorNumber,
 							color = Color.White,
 							fontSize = 56.sp,
 							fontWeight = FontWeight.Bold
 						)
-						if (state.currentFloorNumber != "Térreo") {
-							Text(
-								text = "andar",
-								color = Color.White,
-								fontSize = 17.sp,
-								fontWeight = FontWeight.Normal
-							)
-						}
 					}
 				}
 
@@ -151,7 +155,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 						letterSpacing = 1.5.sp
 					)
 					Spacer(modifier = Modifier.height(6.dp))
-					Divider(
+					HorizontalDivider(
 						modifier = Modifier.width(170.dp),
 						thickness = 2.dp,
 						color = Color(0xFF6B7A99)
@@ -167,28 +171,24 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 				) {
 					FloorButton(
 						floor = "3°",
-						floorNumber = 3,
 						isElevatorHere = state.elevatorFloorNumeric == 3,
 						enabled = !state.isSending,
 						onClick = { viewModel.onFloorSelected(3) }
 					)
 					FloorButton(
 						floor = "2°",
-						floorNumber = 2,
 						isElevatorHere = state.elevatorFloorNumeric == 2,
 						enabled = !state.isSending,
 						onClick = { viewModel.onFloorSelected(2) }
 					)
 					FloorButton(
 						floor = "1°",
-						floorNumber = 1,
 						isElevatorHere = state.elevatorFloorNumeric == 1,
 						enabled = !state.isSending,
 						onClick = { viewModel.onFloorSelected(1) }
 					)
 					FloorButton(
 						floor = "Térreo",
-						floorNumber = 0,
 						isElevatorHere = state.elevatorFloorNumeric == 0,
 						enabled = !state.isSending,
 						onClick = { viewModel.onFloorSelected(0) }
@@ -202,7 +202,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 @Composable
 private fun FloorButton(
 	floor: String,
-	floorNumber: Int,
 	isElevatorHere: Boolean,
 	enabled: Boolean,
 	onClick: () -> Unit

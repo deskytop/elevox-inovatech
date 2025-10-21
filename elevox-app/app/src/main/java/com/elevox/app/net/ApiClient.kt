@@ -62,8 +62,9 @@ object ApiClient {
 
 	private val client: OkHttpClient by lazy {
 		var builder = OkHttpClient.Builder()
-			.connectTimeout(5, TimeUnit.SECONDS)
-			.readTimeout(10, TimeUnit.SECONDS)
+			.connectTimeout(8, TimeUnit.SECONDS)
+			.readTimeout(15, TimeUnit.SECONDS)
+			.writeTimeout(15, TimeUnit.SECONDS)
 
 		computePinFromRaw()?.let { pin ->
 			val pinner = CertificatePinner.Builder()

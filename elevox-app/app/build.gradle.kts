@@ -69,7 +69,6 @@ dependencies {
 	implementation(libs.androidx.compose.material3)
 	implementation(libs.material)
 	debugImplementation(libs.androidx.compose.ui.tooling)
-
 	implementation(libs.coroutines.android)
 	implementation(libs.okhttp)
 	implementation(libs.okhttp.tls)
