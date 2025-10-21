@@ -1,0 +1,189 @@
+# ===============================================
+# 🔒 ARQUIVOS SENSÍVEIS - NÃO COMMITAR!
+# ===============================================
+
+# Certificados e chaves privadas (SENSÍVEL!)
+*.key
+*.crt
+*.pem
+*.p12
+*.pk8
+*.der
+*.jks
+*.keystore
+
+# Exceção: Permite arquivos de exemplo
+!**/*.example.pem
+!**/*.example.crt
+!**/*.example.key
+!**/*.pem.example
+!**/*.crt.example
+!**/*.key.example
+
+# Configurações locais (SENSÍVEL!)
+local.properties
+**/local.properties
+
+# Certificado real do app Android (SENSÍVEL!)
+elevox-app/app/src/main/res/raw/esp.crt
+elevox-app/app/src/main/res/raw/*.crt
+!elevox-app/app/src/main/res/raw/*example*.crt
+
+# Dados ESP32 LittleFS (SENSÍVEL!)
+elevox-server/https_server/data/
+!elevox-server/https_server/data-example/
+elevox-server/https_server/data/wifi_config.json
+elevox-server/https_server/data/server.crt
+elevox-server/https_server/data/server.key
+
+# ===============================================
+# 📦 BUILD ARTIFACTS
+# ===============================================
+
+# Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android artifacts
+*.apk
+*.aab
+*.ap_
+*.aar
+*.dex
+
+# Kotlin
+*.class
+*.kotlin_module
+
+# ===============================================
+# 🛠️ IDEs & EDITORS
+# ===============================================
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+out/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# ===============================================
+# 📱 ANDROID SPECIFIC
+# ===============================================
+
+# Build caches
+.externalNativeBuild/
+.cxx/
+captures/
+
+# Lint
+lint/
+lint-results*.xml
+
+# Navigation
+.navigation/
+
+# Profiler
+*.hprof
+
+# ===============================================
+# 🔧 ESP32 / ARDUINO
+# ===============================================
+
+# PlatformIO
+.pio/
+.arduinoIDE/
+**/.pio/
+**/.arduinoIDE/
+
+# Arduino compiled files
+*.ino.bin
+*.ino.elf
+*.ino.hex
+*.ino.map
+
+# ESP32 bootloader
+bootloader.bin
+partitions.bin
+
+# ===============================================
+# 📝 LOGS & TEMP FILES
+# ===============================================
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.pyc
+
+# ===============================================
+# 💻 OS SPECIFIC
+# ===============================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+# ===============================================
+# 📊 DATABASE & DATA FILES (SE HOUVER)
+# ===============================================
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# JSON com dados sensíveis (específicos)
+*credentials*.json
+*secrets*.json
+*config*.json
+!*config.example.json
+!*config-example.json
+
+# ===============================================
+# 🔐 SECURITY SCANNING
+# ===============================================
+
+# GitGuardian / Security scans
+.ggshield.yaml
+.gitleaks.toml
+
+# Dependabot
+.dependabot/
+

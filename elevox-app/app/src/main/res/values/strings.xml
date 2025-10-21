@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Elevox</string>
+	<string name="test_connection">Testar conexão</string>
+	<string name="testing">Testando…</string>
+	<string name="connection_ok">Conexão OK</string>
+	<string name="connection_failed">Falha na conexão</string>
+</resources>
+
+
+

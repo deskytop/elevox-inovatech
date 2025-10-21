@@ -1,0 +1,7 @@
+# Example certificate for development (PEM). Do NOT use in production.
+# Copy this file to app/src/main/res/raw/esp.crt with your real device cert.
+# The real esp.crt is ignored by .gitignore and must not be committed.
+-----BEGIN CERTIFICATE-----
+x
+-----END CERTIFICATE-----
+

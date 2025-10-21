@@ -1,0 +1,9 @@
+# Copy this file to local.properties and adjust values for your environment
+# This file MUST NOT be committed; .gitignore already excludes local.properties
+
+# Required: ESP32 host (IP or hostname). Do not include protocol.
+ESP32_HOST=192.168.0.10
+
+# Note: The app computes the SPKI pin at runtime from res/raw/esp.crt.
+# No certificate pin needs to be configured here.
+
