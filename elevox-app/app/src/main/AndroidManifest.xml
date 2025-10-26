@@ -4,8 +4,8 @@
 	<uses-permission android:name="android.permission.INTERNET" />
 
 	<!-- Permissões Bluetooth para Android 12+ (API 31+) -->
+	<!-- IMPORTANTE: Sem neverForLocation para forçar solicitação ao usuário -->
 	<uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-		android:usesPermissionFlags="neverForLocation"
 		tools:targetApi="s" />
 	<uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
 		tools:targetApi="s" />

@@ -36,6 +36,11 @@ class MainActivity : ComponentActivity() {
 	private val permissionLauncher = registerForActivityResult(
 		ActivityResultContracts.RequestMultiplePermissions()
 	) { permissions ->
+		android.util.Log.d("MainActivity", "=== RESULTADO DAS PERMISSÕES ===")
+		permissions.forEach { (permission, granted) ->
+			android.util.Log.d("MainActivity", "$permission: ${if (granted) "✓ CONCEDIDA" else "✗ NEGADA"}")
+		}
+
 		// Atualiza o estado do serviço após conceder/negar permissões
 		updateServiceState()
 	}
@@ -46,17 +51,18 @@ class MainActivity : ComponentActivity() {
 		prefs = getSharedPreferences("elevox_settings", Context.MODE_PRIVATE)
 		prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
-		// Solicita permissões na primeira abertura se auto-detecção estiver ativada
-		requestPermissionsIfNeeded()
-
-		// Verifica e inicia o serviço se auto-detecção estiver ativada
-		updateServiceState()
-
 		setContent {
 			ElevoxApp {
 				ElevoxNavigation()
 			}
 		}
+
+		// Solicita permissões na primeira abertura se auto-detecção estiver ativada
+		// Chamado APÓS setContent para evitar problemas de timing
+		requestPermissionsIfNeeded()
+
+		// Verifica e inicia o serviço se auto-detecção estiver ativada
+		updateServiceState()
 	}
 
 	/**
@@ -64,10 +70,18 @@ class MainActivity : ComponentActivity() {
 	 */
 	private fun requestPermissionsIfNeeded() {
 		val autoDetectionEnabled = prefs.getBoolean("auto_detection_enabled", true)
+		val hasAllPermissions = BluetoothPermissionHelper.hasAllPermissions(this)
+		val missingPermissions = BluetoothPermissionHelper.getMissingPermissions(this)
 
-		if (autoDetectionEnabled && !BluetoothPermissionHelper.hasAllPermissions(this)) {
-			// Solicita as permissões na primeira abertura
-			permissionLauncher.launch(BluetoothPermissionHelper.getRequiredPermissions())
+		android.util.Log.d("MainActivity", "=== VERIFICAÇÃO DE PERMISSÕES ===")
+		android.util.Log.d("MainActivity", "Auto-detecção habilitada: $autoDetectionEnabled")
+		android.util.Log.d("MainActivity", "Todas permissões concedidas: $hasAllPermissions")
+		android.util.Log.d("MainActivity", "Permissões faltando: ${missingPermissions.joinToString()}")
+
+		if (autoDetectionEnabled && !hasAllPermissions) {
+			val permissionsToRequest = BluetoothPermissionHelper.getRequiredPermissions()
+			android.util.Log.d("MainActivity", "Solicitando permissões: ${permissionsToRequest.joinToString()}")
+			permissionLauncher.launch(permissionsToRequest)
 		}
 	}
 
