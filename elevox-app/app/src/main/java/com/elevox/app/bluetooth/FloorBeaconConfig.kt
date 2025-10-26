@@ -40,7 +40,7 @@ object FloorBeaconConfig {
 	 * Intervalo de scan em milissegundos
 	 * 5000ms = 5 segundos (balance entre bateria e responsividade)
 	 */
-	const val SCAN_INTERVAL_MS = 5000L
+	const val SCAN_INTERVAL_MS = 3000L
 
 	/**
 	 * Duração de cada scan em milissegundos
