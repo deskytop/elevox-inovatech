@@ -78,6 +78,13 @@ class FloorLocationService : Service() {
 	override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 		Log.d(TAG, "Service onStartCommand")
 
+		// Verifica se tem as permissões necessárias
+		if (!BluetoothPermissionHelper.hasAllPermissions(this)) {
+			Log.e(TAG, "Permissões necessárias não foram concedidas. Parando serviço.")
+			stopSelf()
+			return START_NOT_STICKY
+		}
+
 		// Inicia o serviço em foreground com notificação
 		startForeground(NOTIFICATION_ID, createNotification())
 
@@ -114,40 +121,52 @@ class FloorLocationService : Service() {
 	 * Realiza um scan de dispositivos Bluetooth
 	 */
 	private suspend fun performScan() {
+		Log.i(TAG, "=== INICIANDO NOVO SCAN ===")
+
 		if (!bluetoothScanner.isBluetoothEnabled()) {
-			Log.w(TAG, "Bluetooth desativado")
+			Log.w(TAG, "⚠️ Bluetooth desativado - pulando scan")
 			updateNotification("Bluetooth desativado")
 			return
 		}
 
 		if (!bluetoothScanner.isBleSupported()) {
-			Log.w(TAG, "BLE não suportado neste dispositivo")
+			Log.e(TAG, "❌ BLE não suportado neste dispositivo - parando serviço")
 			stopSelf()
 			return
 		}
 
-		Log.d(TAG, "Iniciando scan...")
+		// Verifica permissões novamente (podem ter sido revogadas)
+		if (!BluetoothPermissionHelper.hasAllPermissions(this)) {
+			Log.e(TAG, "❌ Permissões foram revogadas - parando serviço")
+			stopSelf()
+			return
+		}
+
+		Log.d(TAG, "✓ Bluetooth ativo, BLE suportado, permissões OK")
 		updateNotification("Detectando andar...")
 
 		var detectedFloor: Int? = null
 		val scanDuration = FloorBeaconConfig.SCAN_DURATION_MS
+		var deviceCount = 0
 
 		// Coleta resultados do scan por X segundos
 		val collectJob = serviceScope.launch {
 			bluetoothScanner.startScanning()
 				.catch { e ->
-					Log.e(TAG, "Erro no scan", e)
+					Log.e(TAG, "❌ Erro no scan: ${e.message}", e)
 				}
 				.collect { devices ->
-					Log.d(TAG, "Dispositivos detectados: ${devices.size}")
+					deviceCount = devices.size
+					Log.d(TAG, "📡 Beacons detectados neste scan: $deviceCount")
 
 					// Atualiza a detecção com os dispositivos encontrados
 					val floor = floorDetector.detectFloor(devices)
 					if (floor != null) {
 						detectedFloor = floor
+						Log.i(TAG, "🎯 Andar identificado: ${formatFloorName(floor)}")
 					}
 
-					// Log de debug
+					// Log de debug detalhado
 					if (devices.isNotEmpty()) {
 						Log.d(TAG, floorDetector.getDebugInfo(devices))
 					}
@@ -163,11 +182,17 @@ class FloorLocationService : Service() {
 			saveDetectedFloor(detectedFloor!!)
 			val floorName = formatFloorName(detectedFloor!!)
 			updateNotification("Andar detectado: $floorName")
-			Log.d(TAG, "Andar detectado: $floorName")
+			Log.i(TAG, "✅ RESULTADO: Andar $floorName salvo (total de $deviceCount beacons detectados)")
 		} else {
-			Log.d(TAG, "Nenhum andar detectado neste scan")
+			if (deviceCount > 0) {
+				Log.w(TAG, "⚠️ RESULTADO: $deviceCount beacons detectados mas nenhum andar identificado (RSSI muito fraco?)")
+			} else {
+				Log.w(TAG, "⚠️ RESULTADO: Nenhum beacon detectado neste scan")
+			}
 			updateNotification("Procurando beacons...")
 		}
+
+		Log.i(TAG, "=== FIM DO SCAN ===\n")
 	}
 
 	/**

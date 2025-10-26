@@ -62,9 +62,12 @@ class BluetoothScanner(private val context: Context) {
 					val deviceAddress = scanResult.device?.address ?: return
 					val rssi = scanResult.rssi
 
+					// Log de TODOS os dispositivos detectados (mesmo não-beacons)
+					Log.d(TAG, "Dispositivo BLE detectado: nome='$deviceName', MAC=$deviceAddress, RSSI=$rssi dBm")
+
 					// Verifica se é um beacon configurado
 					if (FloorBeaconConfig.isValidBeacon(deviceName)) {
-						Log.d(TAG, "Beacon detectado: $deviceName (RSSI: $rssi dBm)")
+						Log.i(TAG, "✓ BEACON VÁLIDO: $deviceName (RSSI: $rssi dBm)")
 
 						// Atualiza ou adiciona o dispositivo
 						detectedDevices[deviceAddress] = BluetoothDevice(
@@ -75,6 +78,8 @@ class BluetoothScanner(private val context: Context) {
 
 						// Emite a lista atualizada
 						trySend(detectedDevices.values.toList())
+					} else {
+						Log.d(TAG, "✗ Dispositivo ignorado (não é beacon configurado): $deviceName")
 					}
 				}
 			}

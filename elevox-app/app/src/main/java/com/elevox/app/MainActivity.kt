@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,11 +32,22 @@ class MainActivity : ComponentActivity() {
 		}
 	}
 
+	// Launcher para solicitar permissões na primeira abertura
+	private val permissionLauncher = registerForActivityResult(
+		ActivityResultContracts.RequestMultiplePermissions()
+	) { permissions ->
+		// Atualiza o estado do serviço após conceder/negar permissões
+		updateServiceState()
+	}
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 
 		prefs = getSharedPreferences("elevox_settings", Context.MODE_PRIVATE)
 		prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+
+		// Solicita permissões na primeira abertura se auto-detecção estiver ativada
+		requestPermissionsIfNeeded()
 
 		// Verifica e inicia o serviço se auto-detecção estiver ativada
 		updateServiceState()
@@ -44,6 +56,18 @@ class MainActivity : ComponentActivity() {
 			ElevoxApp {
 				ElevoxNavigation()
 			}
+		}
+	}
+
+	/**
+	 * Solicita permissões necessárias na primeira abertura do app
+	 */
+	private fun requestPermissionsIfNeeded() {
+		val autoDetectionEnabled = prefs.getBoolean("auto_detection_enabled", true)
+
+		if (autoDetectionEnabled && !BluetoothPermissionHelper.hasAllPermissions(this)) {
+			// Solicita as permissões na primeira abertura
+			permissionLauncher.launch(BluetoothPermissionHelper.getRequiredPermissions())
 		}
 	}
 

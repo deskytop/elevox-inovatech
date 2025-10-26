@@ -68,7 +68,10 @@ fun SettingsScreen(
 		contract = ActivityResultContracts.RequestMultiplePermissions()
 	) { permissions ->
 		val allGranted = permissions.values.all { it }
-		if (!allGranted) {
+		if (allGranted) {
+			// Todas as permissões foram concedidas - ativa auto-detecção
+			viewModel.toggleAutoDetection(true)
+		} else {
 			// Algumas permissões foram negadas
 			showPermissionDeniedDialog = true
 			// Desativa auto-detecção se permissões foram negadas
@@ -300,11 +303,10 @@ fun SettingsScreen(
 				Button(
 					onClick = {
 						showPermissionDialog = false
-						// Solicita as permissões
+						// Solicita as permissões (não ativa ainda - espera callback)
 						permissionLauncher.launch(
 							BluetoothPermissionHelper.getRequiredPermissions()
 						)
-						viewModel.toggleAutoDetection(true)
 					},
 					colors = ButtonDefaults.buttonColors(
 						containerColor = Color(0xFF0066FF)
