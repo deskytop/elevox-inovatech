@@ -1,6 +1,8 @@
 package com.elevox.app.home
 
+import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +42,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +58,11 @@ fun HomeScreen(
 ) {
 	val state by viewModel.state.collectAsState()
 	val snackbarHostState = remember { SnackbarHostState() }
+	val context = LocalContext.current
+
+	// Verifica se auto-detecção está ativa
+	val prefs = context.getSharedPreferences("elevox_settings", Context.MODE_PRIVATE)
+	val isAutoDetectionEnabled = prefs.getBoolean("auto_detection_enabled", true)
 
 	// Limpa a mensagem quando a tela é recomposta (volta das configurações)
 	LaunchedEffect(Unit) {
@@ -111,7 +120,11 @@ fun HomeScreen(
 					modifier = Modifier.fillMaxWidth(),
 					shape = RoundedCornerShape(28.dp),
 					colors = CardDefaults.cardColors(
-						containerColor = Color(0xFF0D1D35)
+						containerColor = if (isAutoDetectionEnabled) {
+							Color(0xFF0D1D35) // Cor normal para auto-detecção
+						} else {
+							Color(0xFF1A2A40) // Cor diferente para modo manual
+						}
 					),
 					elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
 				) {
@@ -122,13 +135,53 @@ fun HomeScreen(
 						horizontalAlignment = Alignment.CenterHorizontally,
 						verticalArrangement = Arrangement.spacedBy(12.dp)
 					) {
-						Text(
-							text = "ANDAR ATUAL",
-							color = Color(0xFFD0DDEC),
-							fontSize = 16.sp,
-							fontWeight = FontWeight.Bold,
-							letterSpacing = 1.5.sp
-						)
+						// Cabeçalho com título e badge
+						Row(
+							verticalAlignment = Alignment.CenterVertically,
+							horizontalArrangement = Arrangement.Center
+						) {
+							Text(
+								text = "ANDAR ATUAL",
+								color = Color(0xFFD0DDEC),
+								fontSize = 16.sp,
+								fontWeight = FontWeight.Bold,
+								letterSpacing = 1.5.sp
+							)
+
+							// Badge AUTO quando auto-detecção está ativa
+							if (isAutoDetectionEnabled) {
+								Spacer(modifier = Modifier.width(8.dp))
+								Surface(
+									shape = RoundedCornerShape(8.dp),
+									color = Color(0xFF0066FF).copy(alpha = 0.3f),
+									modifier = Modifier.border(
+										width = 1.dp,
+										color = Color(0xFF0066FF),
+										shape = RoundedCornerShape(8.dp)
+									)
+								) {
+									Row(
+										modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+										verticalAlignment = Alignment.CenterVertically,
+										horizontalArrangement = Arrangement.spacedBy(4.dp)
+									) {
+										// Ícone Bluetooth
+										Text(
+											text = "⚡",
+											fontSize = 12.sp,
+											color = Color(0xFF0066FF)
+										)
+										Text(
+											text = "AUTO",
+											fontSize = 11.sp,
+											fontWeight = FontWeight.Bold,
+											color = Color(0xFF0066FF),
+											letterSpacing = 0.5.sp
+										)
+									}
+								}
+							}
+						}
 
 						// Exibe apenas o número/nome do andar
 						Text(
@@ -137,6 +190,16 @@ fun HomeScreen(
 							fontSize = 56.sp,
 							fontWeight = FontWeight.Bold
 						)
+
+						// Texto indicativo do modo
+						if (!isAutoDetectionEnabled) {
+							Text(
+								text = "Modo manual",
+								color = Color(0xFF8B9BB3),
+								fontSize = 13.sp,
+								fontWeight = FontWeight.Normal
+							)
+						}
 					}
 				}
 

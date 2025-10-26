@@ -1,5 +1,10 @@
 package com.elevox.app.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,18 +31,24 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.elevox.app.bluetooth.BluetoothPermissionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +57,24 @@ fun SettingsScreen(
 	onBackClick: () -> Unit
 ) {
 	val state by viewModel.state.collectAsState()
+	val context = LocalContext.current
+
+	// Estado para controlar diálogos
+	var showPermissionDialog by remember { mutableStateOf(false) }
+	var showPermissionDeniedDialog by remember { mutableStateOf(false) }
+
+	// Launcher para solicitar permissões
+	val permissionLauncher = rememberLauncherForActivityResult(
+		contract = ActivityResultContracts.RequestMultiplePermissions()
+	) { permissions ->
+		val allGranted = permissions.values.all { it }
+		if (!allGranted) {
+			// Algumas permissões foram negadas
+			showPermissionDeniedDialog = true
+			// Desativa auto-detecção se permissões foram negadas
+			viewModel.toggleAutoDetection(false)
+		}
+	}
 
 	Scaffold(
 		topBar = {
@@ -126,7 +158,18 @@ fun SettingsScreen(
 						)
 						Switch(
 							checked = state.autoDetectionEnabled,
-							onCheckedChange = { viewModel.toggleAutoDetection(it) },
+							onCheckedChange = { enabled ->
+								if (enabled) {
+									// Verificar permissões antes de ativar
+									if (BluetoothPermissionHelper.hasAllPermissions(context)) {
+										viewModel.toggleAutoDetection(true)
+									} else {
+										showPermissionDialog = true
+									}
+								} else {
+									viewModel.toggleAutoDetection(false)
+								}
+							},
 							colors = SwitchDefaults.colors(
 								checkedThumbColor = Color.White,
 								checkedTrackColor = Color(0xFF0066FF),
@@ -235,6 +278,103 @@ fun SettingsScreen(
 				}
 			}
 		}
+	}
+
+	// Dialog: Explicação sobre permissões
+	if (showPermissionDialog) {
+		AlertDialog(
+			onDismissRequest = { showPermissionDialog = false },
+			title = {
+				Text(
+					text = "Permissões Necessárias",
+					fontWeight = FontWeight.Bold
+				)
+			},
+			text = {
+				Text(
+					text = BluetoothPermissionHelper.getPermissionExplanation(),
+					lineHeight = 20.sp
+				)
+			},
+			confirmButton = {
+				Button(
+					onClick = {
+						showPermissionDialog = false
+						// Solicita as permissões
+						permissionLauncher.launch(
+							BluetoothPermissionHelper.getRequiredPermissions()
+						)
+						viewModel.toggleAutoDetection(true)
+					},
+					colors = ButtonDefaults.buttonColors(
+						containerColor = Color(0xFF0066FF)
+					)
+				) {
+					Text("Permitir")
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = { showPermissionDialog = false }) {
+					Text("Cancelar", color = Color(0xFF8B9BB3))
+				}
+			},
+			containerColor = Color(0xFF0D1D35),
+			titleContentColor = Color.White,
+			textContentColor = Color(0xFFD0DDEC)
+		)
+	}
+
+	// Dialog: Permissões negadas
+	if (showPermissionDeniedDialog) {
+		AlertDialog(
+			onDismissRequest = { showPermissionDeniedDialog = false },
+			title = {
+				Text(
+					text = "Permissões Negadas",
+					fontWeight = FontWeight.Bold
+				)
+			},
+			text = {
+				Column {
+					Text(
+						text = "Algumas permissões foram negadas. A detecção automática não funcionará sem elas.",
+						lineHeight = 20.sp
+					)
+					Spacer(modifier = Modifier.height(12.dp))
+					Text(
+						text = "Você pode conceder as permissões nas configurações do sistema.",
+						fontSize = 14.sp,
+						color = Color(0xFF8B9BB3),
+						lineHeight = 18.sp
+					)
+				}
+			},
+			confirmButton = {
+				Button(
+					onClick = {
+						showPermissionDeniedDialog = false
+						// Abre as configurações do app
+						val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+							data = Uri.fromParts("package", context.packageName, null)
+						}
+						context.startActivity(intent)
+					},
+					colors = ButtonDefaults.buttonColors(
+						containerColor = Color(0xFF0066FF)
+					)
+				) {
+					Text("Ir para Configurações")
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = { showPermissionDeniedDialog = false }) {
+					Text("Fechar", color = Color(0xFF8B9BB3))
+				}
+			},
+			containerColor = Color(0xFF0D1D35),
+			titleContentColor = Color.White,
+			textContentColor = Color(0xFFD0DDEC)
+		)
 	}
 }
 

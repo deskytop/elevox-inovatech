@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.elevox.app.bluetooth.FloorLocationService
 import com.elevox.app.data.CommandRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,7 @@ class HomeViewModel(
 	companion object {
 		private const val AUTO_DETECTION_KEY = "auto_detection_enabled"
 		private const val MANUAL_FLOOR_KEY = "manual_floor"
+		private const val DETECTED_FLOOR_KEY = "detected_floor"
 	}
 
 	init {
@@ -87,9 +89,17 @@ class HomeViewModel(
 				val manualFloor = prefs.getInt(MANUAL_FLOOR_KEY, 0)
 
 				if (autoDetectionEnabled) {
-					// TODO: Implementar detecção Bluetooth no futuro
-					// Por enquanto usa o valor manual mesmo com auto-detection ativado
-					_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
+					// Detecção automática via Bluetooth
+					// Lê o último andar detectado pelo FloorLocationService
+					val detectedFloor = prefs.getInt(DETECTED_FLOOR_KEY, -1)
+
+					if (detectedFloor != -1) {
+						// Usa o andar detectado pelo Bluetooth
+						_state.value = _state.value.copy(currentFloorNumeric = detectedFloor)
+					} else {
+						// Ainda não detectou nenhum andar, usa o manual como fallback
+						_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
+					}
 				} else {
 					// Modo manual: usa o andar configurado
 					_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
