@@ -2,13 +2,19 @@ package com.elevox.app.home
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.elevox.app.bluetooth.FloorLocationService
+import com.elevox.app.bluetooth.BluetoothPermissionHelper
+import com.elevox.app.bluetooth.BluetoothScanner
+import com.elevox.app.bluetooth.FloorBeaconConfig
+import com.elevox.app.bluetooth.FloorDetector
 import com.elevox.app.data.CommandRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -38,7 +44,7 @@ data class HomeUiState(
 }
 
 class HomeViewModel(
-	context: Context,
+	private val context: Context,
 	private val repository: CommandRepository = CommandRepository()
 ) : ViewModel() {
 
@@ -46,11 +52,16 @@ class HomeViewModel(
 	val state: StateFlow<HomeUiState> = _state
 
 	private val prefs: SharedPreferences = context.getSharedPreferences("elevox_settings", Context.MODE_PRIVATE)
+	private val bluetoothScanner = BluetoothScanner(context)
+	private val floorDetector = FloorDetector()
+	private var scanJob: Job? = null
 
 	companion object {
+		private const val TAG = "HomeViewModel"
 		private const val AUTO_DETECTION_KEY = "auto_detection_enabled"
 		private const val MANUAL_FLOOR_KEY = "manual_floor"
 		private const val DETECTED_FLOOR_KEY = "detected_floor"
+		private const val LAST_DETECTION_TIME_KEY = "last_detection_time"
 	}
 
 	init {
@@ -78,35 +89,103 @@ class HomeViewModel(
 	}
 
 	/**
-	 * Inicia a detecção contínua do andar atual em background
-	 * Lê as configurações do SharedPreferences a cada 2 segundos
+	 * Inicia a detecção contínua do andar via Bluetooth
+	 * Scan ocorre APENAS quando a tela está visível e auto-detecção está ativa
 	 */
 	private fun startFloorDetection() {
-		viewModelScope.launch {
+		scanJob?.cancel()
+		scanJob = viewModelScope.launch {
 			while (isActive) {
-				// Lê configurações do SharedPreferences
 				val autoDetectionEnabled = prefs.getBoolean(AUTO_DETECTION_KEY, true)
 				val manualFloor = prefs.getInt(MANUAL_FLOOR_KEY, 0)
 
 				if (autoDetectionEnabled) {
-					// Detecção automática via Bluetooth
-					// Lê o último andar detectado pelo FloorLocationService
-					val detectedFloor = prefs.getInt(DETECTED_FLOOR_KEY, -1)
-
-					if (detectedFloor != -1) {
-						// Usa o andar detectado pelo Bluetooth
-						_state.value = _state.value.copy(currentFloorNumeric = detectedFloor)
+					// Verifica permissões antes de escanear
+					if (BluetoothPermissionHelper.hasAllPermissions(context)) {
+						performBluetoothScan()
 					} else {
-						// Ainda não detectou nenhum andar, usa o manual como fallback
+						// Sem permissões, usa andar manual como fallback
+						Log.w(TAG, "⚠️ Sem permissões Bluetooth, usando modo manual")
 						_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
 					}
 				} else {
-					// Modo manual: usa o andar configurado
+					// Modo manual
 					_state.value = _state.value.copy(currentFloorNumeric = manualFloor)
 				}
 
-				delay(2000) // Verifica a cada 2 segundos
+				// Aguarda intervalo entre scans
+				delay(FloorBeaconConfig.SCAN_INTERVAL_MS)
 			}
+		}
+	}
+
+	/**
+	 * Realiza um scan Bluetooth para detectar o andar atual
+	 */
+	private suspend fun performBluetoothScan() {
+		Log.i(TAG, "🔍 Iniciando scan Bluetooth...")
+
+		if (!bluetoothScanner.isBluetoothEnabled()) {
+			Log.w(TAG, "⚠️ Bluetooth desativado")
+			return
+		}
+
+		var detectedFloor: Int? = null
+		val scanDuration = FloorBeaconConfig.SCAN_DURATION_MS
+
+		// Coleta resultados do scan
+		val collectJob = viewModelScope.launch {
+			bluetoothScanner.startScanning()
+				.catch { e ->
+					Log.e(TAG, "❌ Erro no scan: ${e.message}", e)
+				}
+				.collect { devices ->
+					Log.d(TAG, "📡 Beacons detectados: ${devices.size}")
+
+					val floor = floorDetector.detectFloor(devices)
+					if (floor != null) {
+						detectedFloor = floor
+						Log.i(TAG, "🎯 Andar detectado: ${formatFloorName(floor)}")
+					}
+				}
+		}
+
+		// Aguarda duração do scan
+		delay(scanDuration)
+		collectJob.cancel()
+
+		// Atualiza estado com andar detectado
+		if (detectedFloor != null) {
+			_state.value = _state.value.copy(currentFloorNumeric = detectedFloor!!)
+			
+			// Salva detecção com timestamp para uso da Alexa
+			saveDetectedFloor(detectedFloor!!)
+			
+			Log.i(TAG, "✅ Andar atualizado: ${formatFloorName(detectedFloor!!)}")
+		} else {
+			Log.w(TAG, "⚠️ Nenhum andar detectado neste scan")
+		}
+	}
+
+	/**
+	 * Salva o andar detectado com timestamp
+	 */
+	private fun saveDetectedFloor(floor: Int) {
+		prefs.edit()
+			.putInt(DETECTED_FLOOR_KEY, floor)
+			.putLong(LAST_DETECTION_TIME_KEY, System.currentTimeMillis())
+			.apply()
+		
+		Log.d(TAG, "💾 Andar $floor salvo com timestamp")
+	}
+
+	/**
+	 * Formata nome do andar para exibição
+	 */
+	private fun formatFloorName(floor: Int): String {
+		return when (floor) {
+			0 -> "Térreo"
+			else -> "${floor}° andar"
 		}
 	}
 
@@ -116,6 +195,13 @@ class HomeViewModel(
 	 */
 	fun onFloorSelected(targetFloor: Int) {
 		if (_state.value.isSending) return
+
+		// Proteção: não permite chamar elevador para o andar atual
+		if (_state.value.currentFloorNumeric == targetFloor) {
+			Log.w(TAG, "⚠️ Tentativa de chamar elevador para o andar atual ($targetFloor) - bloqueado")
+			_state.value = _state.value.copy(lastMessage = "Você já está neste andar")
+			return
+		}
 
 		_state.value = _state.value.copy(isSending = true, lastMessage = null)
 
@@ -164,6 +250,15 @@ class HomeViewModel(
 	 */
 	fun clearLastMessage() {
 		_state.value = _state.value.copy(lastMessage = null)
+	}
+
+	/**
+	 * Cancela scan quando ViewModel é destruído
+	 */
+	override fun onCleared() {
+		super.onCleared()
+		scanJob?.cancel()
+		Log.d(TAG, "🛑 ViewModel destruído, scan Bluetooth cancelado")
 	}
 }
 

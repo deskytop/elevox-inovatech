@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,6 +31,7 @@ class SettingsViewModel(
 
 	init {
 		loadSettings()
+		syncCurrentFloorToFirebase()
 	}
 
 	/**
@@ -40,6 +42,27 @@ class SettingsViewModel(
 			autoDetectionEnabled = prefs.getBoolean(AUTO_DETECTION_KEY, true),
 			manualFloor = prefs.getInt(MANUAL_FLOOR_KEY, 0)
 		)
+	}
+
+	/**
+	 * Sincroniza o andar atual com o Firebase ao iniciar o app
+	 */
+	private fun syncCurrentFloorToFirebase() {
+		viewModelScope.launch {
+			try {
+				val currentFloor = _state.value.manualFloor
+				val database = FirebaseDatabase.getInstance().reference
+				database.child("user_status").child("default_user").child("current_floor").setValue(currentFloor)
+					.addOnSuccessListener {
+						android.util.Log.d("SettingsViewModel", "Andar inicial sincronizado com Firebase: $currentFloor")
+					}
+					.addOnFailureListener { error ->
+						android.util.Log.e("SettingsViewModel", "Erro ao sincronizar andar inicial com Firebase", error)
+					}
+			} catch (e: Exception) {
+				android.util.Log.e("SettingsViewModel", "Exceção ao sincronizar andar inicial com Firebase", e)
+			}
+		}
 	}
 
 	/**
@@ -67,7 +90,23 @@ class SettingsViewModel(
 		)
 
 		viewModelScope.launch {
+			// Salva localmente
 			prefs.edit().putInt(MANUAL_FLOOR_KEY, floor).apply()
+
+			// Sincroniza com Firebase para a Alexa poder consultar
+			try {
+				val database = FirebaseDatabase.getInstance().reference
+				database.child("user_status").child("default_user").child("current_floor").setValue(floor)
+					.addOnSuccessListener {
+						android.util.Log.d("SettingsViewModel", "Andar manual sincronizado com Firebase: $floor")
+					}
+					.addOnFailureListener { error ->
+						android.util.Log.e("SettingsViewModel", "Erro ao sincronizar andar com Firebase", error)
+					}
+			} catch (e: Exception) {
+				android.util.Log.e("SettingsViewModel", "Exceção ao sincronizar andar com Firebase", e)
+			}
+
 			_state.value = _state.value.copy(isSaving = false)
 		}
 	}

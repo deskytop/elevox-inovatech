@@ -12,6 +12,7 @@ Sistema IoT para controle de elevadores usando ESP32 e aplicativo Android com co
 - [Visão Geral](#-visão-geral)
 - [Arquitetura](#-arquitetura)
 - [Segurança](#-segurança)
+- [Integração Alexa](#-integração-alexa)
 - [Pré-requisitos](#-pré-requisitos)
 - [Instalação](#-instalação)
 - [Uso](#-uso)
@@ -29,6 +30,7 @@ O **Elevox** é um sistema de controle de elevadores que permite:
 - 🌐 **Rede Local** - Comunicação WiFi entre app e ESP32
 - ⚡ **Tempo Real** - Comandos instantâneos via HTTPS
 - 🛠️ **IoT Moderno** - ESP32 como servidor HTTPS
+- 🎤 **Controle por Voz** - Integração com Amazon Alexa (via Firebase)
 
 ---
 
@@ -75,6 +77,37 @@ O projeto implementa múltiplas camadas de segurança:
 ### 📖 Documentação
 
 **⚠️ IMPORTANTE:** Este projeto usa certificados auto-assinados adequados para **desenvolvimento**. Para produção, use certificados válidos.
+
+---
+
+## 🎤 Integração Alexa
+
+O Elevox pode ser controlado por voz usando a Amazon Alexa através do Firebase Realtime Database!
+
+### Arquitetura
+
+```
+Alexa → AWS Lambda → Firebase → App Android → ESP32
+```
+
+### Comandos de Voz
+
+- **"Alexa, abre Elevox"** - Inicia a skill
+- **"Alexa, pede Elevox para chamar o elevador"** - Chama elevador
+- **"Alexa, pede Elevox para ir para o andar cinco"** - Vai para andar específico
+
+### Documentação Completa
+
+Veja o guia completo em: [elevox-alexa-skill/README.md](elevox-alexa-skill/README.md)
+
+**Guia Rápido (30 min)**: [elevox-alexa-skill/QUICKSTART.md](elevox-alexa-skill/QUICKSTART.md)
+
+### Custos
+
+✅ **Totalmente GRATUITO** (dentro do Free Tier):
+- AWS Lambda: 1 milhão requisições/mês grátis
+- Firebase: 1 GB + 10 GB download/mês grátis
+- Alexa Skills: Sempre gratuito
 
 ---
 

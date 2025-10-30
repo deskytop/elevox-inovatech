@@ -1,0 +1,23 @@
+{
+  "name": "elevox-alexa-skill",
+  "version": "1.0.0",
+  "description": "Alexa Skill para controlar o sistema Elevox via Firebase",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "alexa",
+    "elevox",
+    "firebase",
+    "elevator"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ask-sdk-core": "^2.13.0",
+    "ask-sdk-model": "^1.38.0",
+    "firebase-admin": "^12.0.0"
+  }
+}

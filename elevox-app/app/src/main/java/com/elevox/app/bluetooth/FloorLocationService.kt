@@ -14,6 +14,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.elevox.app.MainActivity
 import com.elevox.app.R
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -196,13 +197,30 @@ class FloorLocationService : Service() {
 	}
 
 	/**
-	 * Salva o andar detectado no SharedPreferences
+	 * Salva o andar detectado no SharedPreferences e Firebase
 	 */
 	private fun saveDetectedFloor(floor: Int) {
+		val timestamp = System.currentTimeMillis()
+
+		// Salva localmente no SharedPreferences
 		prefs.edit()
 			.putInt(DETECTED_FLOOR_KEY, floor)
-			.putLong(LAST_DETECTION_TIME_KEY, System.currentTimeMillis())
+			.putLong(LAST_DETECTION_TIME_KEY, timestamp)
 			.apply()
+
+		// Sincroniza com Firebase para a Alexa poder consultar
+		try {
+			val database = FirebaseDatabase.getInstance().reference
+			database.child("user_status").child("default_user").child("current_floor").setValue(floor)
+				.addOnSuccessListener {
+					Log.d(TAG, "✅ Andar $floor sincronizado com Firebase")
+				}
+				.addOnFailureListener { e ->
+					Log.w(TAG, "⚠️ Erro ao sincronizar andar com Firebase: ${e.message}")
+				}
+		} catch (e: Exception) {
+			Log.w(TAG, "⚠️ Exceção ao sincronizar andar: ${e.message}")
+		}
 	}
 
 	/**

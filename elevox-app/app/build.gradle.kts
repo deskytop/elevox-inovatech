@@ -3,6 +3,7 @@ import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 plugins {
 	alias(libs.plugins.android.application)
 	alias(libs.plugins.kotlin.android)
+	id("com.google.gms.google-services")
 }
 
 android {
@@ -76,4 +77,10 @@ dependencies {
 	implementation(libs.retrofit)
 	implementation(libs.retrofit.moshi)
 	implementation(libs.moshi.kotlin)
+
+	// Firebase
+	implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+	implementation("com.google.firebase:firebase-database-ktx")
+	implementation("com.google.firebase:firebase-auth-ktx")
+	implementation("com.google.firebase:firebase-messaging-ktx")
 }

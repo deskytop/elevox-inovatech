@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "commands": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$commandId": {
+        ".validate": "newData.hasChildren(['type', 'currentFloor', 'timestamp', 'processed'])",
+        "type": {
+          ".validate": "newData.isString() && (newData.val() === 'CALL_ELEVATOR' || newData.val() === 'GO_TO_FLOOR')"
+        },
+        "currentFloor": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+        },
+        "targetFloor": {
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 10)"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber()"
+        },
+        "processed": {
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    }
+  }
+}

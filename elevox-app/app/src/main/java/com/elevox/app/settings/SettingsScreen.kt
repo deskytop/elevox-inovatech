@@ -3,6 +3,7 @@ package com.elevox.app.settings
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -58,6 +61,9 @@ fun SettingsScreen(
 ) {
 	val state by viewModel.state.collectAsState()
 	val context = LocalContext.current
+
+	// Intercepta o botão físico de voltar do Android
+	BackHandler(onBack = onBackClick)
 
 	// Estado para controlar diálogos
 	var showPermissionDialog by remember { mutableStateOf(false) }
@@ -105,6 +111,7 @@ fun SettingsScreen(
 			)
 		}
 	) { padding ->
+		val scrollState = rememberScrollState()
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
@@ -117,8 +124,9 @@ fun SettingsScreen(
 					)
 				)
 				.padding(padding)
+				.verticalScroll(scrollState)
 				.padding(horizontal = 24.dp, vertical = 16.dp),
-			verticalArrangement = Arrangement.spacedBy(20.dp)
+			verticalArrangement = Arrangement.spacedBy(18.dp)
 		) {
 			// Card: Detecção Automática
 			Card(

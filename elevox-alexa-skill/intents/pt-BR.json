@@ -1,0 +1,138 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "controle elevox",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "ChamarElevadorIntent",
+          "slots": [
+            {
+              "name": "andar_atual",
+              "type": "ANDAR_TYPE"
+            }
+          ],
+          "samples": [
+            "chamar o elevador",
+            "chamar o elevador para o andar {andar_atual}",
+            "chama o elevador",
+            "chama o elevador no andar {andar_atual}",
+            "preciso do elevador",
+            "preciso do elevador no andar {andar_atual}",
+            "quero usar o elevador",
+            "estou no andar {andar_atual} e preciso do elevador"
+          ]
+        },
+        {
+          "name": "IrParaAndarIntent",
+          "slots": [
+            {
+              "name": "andar_atual",
+              "type": "ANDAR_TYPE"
+            },
+            {
+              "name": "andar_destino",
+              "type": "ANDAR_TYPE"
+            }
+          ],
+          "samples": [
+            "ir para o andar {andar_destino}",
+            "ir do andar {andar_atual} para o andar {andar_destino}",
+            "quero ir para o andar {andar_destino}",
+            "quero ir do andar {andar_atual} para o andar {andar_destino}",
+            "subir para o andar {andar_destino}",
+            "descer para o andar {andar_destino}",
+            "do andar {andar_atual} para o {andar_destino}",
+            "levar para o andar {andar_destino}",
+            "estou no {andar_atual} e quero ir para o {andar_destino}"
+          ]
+        },
+        {
+          "name": "ConfirmarSimIntent",
+          "slots": [],
+          "samples": [
+            "sim",
+            "confirmar",
+            "ok",
+            "pode ir",
+            "isso mesmo",
+            "correto"
+          ]
+        },
+        {
+          "name": "ConfirmarNaoIntent",
+          "slots": [],
+          "samples": [
+            "não",
+            "cancelar",
+            "negativo",
+            "para",
+            "errado"
+          ]
+        }
+      ],
+      "types": [
+        {
+          "name": "ANDAR_TYPE",
+          "values": [
+            {
+              "id": "0",
+              "name": {
+                "value": "térreo",
+                "synonyms": [
+                  "terreo",
+                  "zero",
+                  "0"
+                ]
+              }
+            },
+            {
+              "id": "1",
+              "name": {
+                "value": "primeiro",
+                "synonyms": [
+                  "primeiro andar",
+                  "um",
+                  "1"
+                ]
+              }
+            },
+            {
+              "id": "2",
+              "name": {
+                "value": "segundo",
+                "synonyms": [
+                  "segundo andar",
+                  "dois",
+                  "2"
+                ]
+              }
+            },
+            {
+              "id": "3",
+              "name": {
+                "value": "terceiro",
+                "synonyms": [
+                  "terceiro andar",
+                  "três",
+                  "3"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

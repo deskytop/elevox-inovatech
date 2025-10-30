@@ -22,15 +22,13 @@ import com.elevox.app.home.HomeScreen
 import com.elevox.app.home.HomeViewModel
 import com.elevox.app.settings.SettingsScreen
 import com.elevox.app.settings.SettingsViewModel
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
 	private lateinit var prefs: SharedPreferences
-	private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-		if (key == "auto_detection_enabled") {
-			updateServiceState()
-		}
-	}
 
 	// Launcher para solicitar permissões na primeira abertura
 	private val permissionLauncher = registerForActivityResult(
@@ -40,16 +38,12 @@ class MainActivity : ComponentActivity() {
 		permissions.forEach { (permission, granted) ->
 			android.util.Log.d("MainActivity", "$permission: ${if (granted) "✓ CONCEDIDA" else "✗ NEGADA"}")
 		}
-
-		// Atualiza o estado do serviço após conceder/negar permissões
-		updateServiceState()
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 
 		prefs = getSharedPreferences("elevox_settings", Context.MODE_PRIVATE)
-		prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
 		setContent {
 			ElevoxApp {
@@ -61,8 +55,8 @@ class MainActivity : ComponentActivity() {
 		// Chamado APÓS setContent para evitar problemas de timing
 		requestPermissionsIfNeeded()
 
-		// Verifica e inicia o serviço se auto-detecção estiver ativada
-		updateServiceState()
+		// Registra token FCM para receber comandos da Alexa via push notifications
+		registerFCMToken()
 	}
 
 	/**
@@ -85,24 +79,54 @@ class MainActivity : ComponentActivity() {
 		}
 	}
 
-	override fun onDestroy() {
-		super.onDestroy()
-		prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+	/**
+	 * Registra token FCM para receber comandos da Alexa
+	 */
+	private fun registerFCMToken() {
+		android.util.Log.d("MainActivity", "🔑 Registrando token FCM...")
+
+		// Primeiro autentica anonimamente
+		val auth = FirebaseAuth.getInstance()
+
+		if (auth.currentUser != null) {
+			android.util.Log.d("MainActivity", "👤 Usuário já autenticado: ${auth.currentUser?.uid}")
+			obtainAndSaveFCMToken()
+		} else {
+			android.util.Log.d("MainActivity", "🔐 Autenticando anonimamente...")
+			auth.signInAnonymously()
+				.addOnSuccessListener {
+					android.util.Log.d("MainActivity", "✅ Autenticação bem-sucedida: ${it.user?.uid}")
+					obtainAndSaveFCMToken()
+				}
+				.addOnFailureListener { e ->
+					android.util.Log.e("MainActivity", "❌ Erro na autenticação: ${e.message}")
+				}
+		}
 	}
 
 	/**
-	 * Inicia ou para o FloorLocationService baseado nas configurações
+	 * Obtém e salva o token FCM no Firebase
 	 */
-	private fun updateServiceState() {
-		val autoDetectionEnabled = prefs.getBoolean("auto_detection_enabled", true)
-		val hasPermissions = BluetoothPermissionHelper.hasAllPermissions(this)
+	private fun obtainAndSaveFCMToken() {
+		FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+			if (!task.isSuccessful) {
+				android.util.Log.e("MainActivity", "❌ Erro ao obter token FCM: ${task.exception}")
+				return@addOnCompleteListener
+			}
 
-		if (autoDetectionEnabled && hasPermissions) {
-			// Inicia o serviço
-			FloorLocationService.start(this)
-		} else {
-			// Para o serviço
-			FloorLocationService.stop(this)
+			// Token FCM obtido
+			val token = task.result
+			android.util.Log.d("MainActivity", "✅ Token FCM obtido: $token")
+
+			// Salva no Firebase Realtime Database para o Lambda usar
+			val database = FirebaseDatabase.getInstance().reference
+			database.child("fcm_tokens").child("default_user").setValue(token)
+				.addOnSuccessListener {
+					android.util.Log.d("MainActivity", "✅ Token FCM salvo no Firebase")
+				}
+				.addOnFailureListener { e ->
+					android.util.Log.e("MainActivity", "❌ Erro ao salvar token: ${e.message}")
+				}
 		}
 	}
 }

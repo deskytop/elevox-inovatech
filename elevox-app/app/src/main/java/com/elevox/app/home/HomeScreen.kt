@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -90,35 +92,21 @@ fun HomeScreen(
 				)
 				.padding(padding)
 		) {
-			// Botão de configurações no topo direito
-			IconButton(
-				onClick = onSettingsClick,
-				modifier = Modifier
-					.align(Alignment.TopEnd)
-					.padding(16.dp)
-					.semantics { contentDescription = "Configurações" }
-			) {
-				Icon(
-					imageVector = Icons.Default.Settings,
-					contentDescription = "Configurações",
-					tint = Color.White,
-					modifier = Modifier.size(28.dp)
-				)
-			}
-
-			// Conteúdo principal - SEM card envolvente
+			// Conteúdo principal com scroll
+			val scrollState = rememberScrollState()
 			Column(
 				modifier = Modifier
-					.fillMaxWidth()
-					.align(Alignment.Center)
-					.padding(horizontal = 24.dp),
+					.fillMaxSize()
+					.verticalScroll(scrollState)
+					.padding(horizontal = 24.dp)
+					.padding(top = 64.dp, bottom = 24.dp),
 				horizontalAlignment = Alignment.CenterHorizontally,
-				verticalArrangement = Arrangement.spacedBy(24.dp)
+				verticalArrangement = Arrangement.spacedBy(20.dp)
 			) {
 				// Andar atual
 				Card(
 					modifier = Modifier.fillMaxWidth(),
-					shape = RoundedCornerShape(28.dp),
+					shape = RoundedCornerShape(24.dp),
 					colors = CardDefaults.cardColors(
 						containerColor = if (isAutoDetectionEnabled) {
 							Color(0xFF0D1D35) // Cor normal para auto-detecção
@@ -131,9 +119,9 @@ fun HomeScreen(
 					Column(
 						modifier = Modifier
 							.fillMaxWidth()
-							.padding(vertical = 28.dp),
+							.padding(vertical = 24.dp),
 						horizontalAlignment = Alignment.CenterHorizontally,
-						verticalArrangement = Arrangement.spacedBy(12.dp)
+						verticalArrangement = Arrangement.spacedBy(10.dp)
 					) {
 						// Cabeçalho com título e badge
 						Row(
@@ -141,7 +129,7 @@ fun HomeScreen(
 							horizontalArrangement = Arrangement.Center
 						) {
 							Text(
-								text = "ANDAR ATUAL",
+								text = "VOCÊ ESTÁ EM:",
 								color = Color(0xFFD0DDEC),
 								fontSize = 16.sp,
 								fontWeight = FontWeight.Bold,
@@ -213,7 +201,7 @@ fun HomeScreen(
 					Text(
 						text = "CHAMAR ELEVADOR",
 						color = Color(0xFFD0DDEC),
-						fontSize = 20.sp,
+						fontSize = 18.sp,
 						fontWeight = FontWeight.Bold,
 						letterSpacing = 1.5.sp
 					)
@@ -225,38 +213,62 @@ fun HomeScreen(
 					)
 				}
 
-				Spacer(modifier = Modifier.height(12.dp))
+				Spacer(modifier = Modifier.height(8.dp))
 
 				// Botões de andar - TODOS sempre aparecem
 				Column(
-					verticalArrangement = Arrangement.spacedBy(16.dp),
+					verticalArrangement = Arrangement.spacedBy(14.dp),
 					modifier = Modifier.fillMaxWidth()
 				) {
 					FloorButton(
 						floor = "3°",
+						floorNumber = 3,
+						isCurrentFloor = state.currentFloorNumeric == 3,
 						isElevatorHere = state.elevatorFloorNumeric == 3,
-						enabled = !state.isSending,
+						enabled = !state.isSending && state.currentFloorNumeric != 3,
 						onClick = { viewModel.onFloorSelected(3) }
 					)
 					FloorButton(
 						floor = "2°",
+						floorNumber = 2,
+						isCurrentFloor = state.currentFloorNumeric == 2,
 						isElevatorHere = state.elevatorFloorNumeric == 2,
-						enabled = !state.isSending,
+						enabled = !state.isSending && state.currentFloorNumeric != 2,
 						onClick = { viewModel.onFloorSelected(2) }
 					)
 					FloorButton(
 						floor = "1°",
+						floorNumber = 1,
+						isCurrentFloor = state.currentFloorNumeric == 1,
 						isElevatorHere = state.elevatorFloorNumeric == 1,
-						enabled = !state.isSending,
+						enabled = !state.isSending && state.currentFloorNumeric != 1,
 						onClick = { viewModel.onFloorSelected(1) }
 					)
 					FloorButton(
 						floor = "Térreo",
+						floorNumber = 0,
+						isCurrentFloor = state.currentFloorNumeric == 0,
 						isElevatorHere = state.elevatorFloorNumeric == 0,
-						enabled = !state.isSending,
+						enabled = !state.isSending && state.currentFloorNumeric != 0,
 						onClick = { viewModel.onFloorSelected(0) }
 					)
 				}
+			}
+
+			// Botão de configurações fixo no topo direito
+			IconButton(
+				onClick = onSettingsClick,
+				modifier = Modifier
+					.align(Alignment.TopEnd)
+					.padding(16.dp)
+					.semantics { contentDescription = "Configurações" }
+			) {
+				Icon(
+					imageVector = Icons.Default.Settings,
+					contentDescription = "Configurações",
+					tint = Color.White,
+					modifier = Modifier.size(28.dp)
+				)
 			}
 		}
 	}
@@ -265,6 +277,8 @@ fun HomeScreen(
 @Composable
 private fun FloorButton(
 	floor: String,
+	floorNumber: Int,
+	isCurrentFloor: Boolean,
 	isElevatorHere: Boolean,
 	enabled: Boolean,
 	onClick: () -> Unit
@@ -273,13 +287,13 @@ private fun FloorButton(
 		modifier = Modifier.fillMaxWidth(),
 		contentAlignment = Alignment.Center
 	) {
-		// Camada de glow forte (apenas nos botões azuis)
-		if (!isElevatorHere) {
+		// Camada de glow - apenas para botões azuis normais (não é andar atual)
+		if (!isCurrentFloor) {
 			Box(
 				modifier = Modifier
 					.fillMaxWidth()
 					.padding(horizontal = 8.dp)
-					.height(86.dp)
+					.height(72.dp)
 					.background(
 						brush = Brush.radialGradient(
 							colors = listOf(
@@ -290,42 +304,38 @@ private fun FloorButton(
 							),
 							radius = 600f
 						),
-						shape = RoundedCornerShape(28.dp)
+						shape = RoundedCornerShape(24.dp)
 					)
 			)
 		}
 
-		// Botão principal - SEM border, altura aumentada
+		// Botão principal
 		Button(
 			onClick = onClick,
 			enabled = enabled,
 			modifier = Modifier
 				.fillMaxWidth()
-				.height(if (isElevatorHere) 82.dp else 78.dp),
-			shape = RoundedCornerShape(28.dp),
+				.height(if (isElevatorHere) 72.dp else 64.dp),
+			shape = RoundedCornerShape(24.dp),
 			colors = ButtonDefaults.buttonColors(
-				containerColor = if (isElevatorHere) {
-					Color(0xFF0D1D35) // Escuro quando elevador está aqui
+				containerColor = if (isCurrentFloor) {
+					Color(0xFF0D1D35) // Escuro quando é andar atual (aparência de selecionado)
 				} else {
-					Color(0xFF0066FF) // Azul normal
+					Color(0xFF0066FF) // Azul normal para outros andares
 				},
-				disabledContainerColor = if (isElevatorHere) {
-					Color(0xFF0A1220)
-				} else {
-					Color(0xFF003580)
-				}
+				disabledContainerColor = Color(0xFF0D1D35) // Sempre escuro quando desabilitado
 			),
 			elevation = ButtonDefaults.buttonElevation(
 				defaultElevation = 0.dp,
 				pressedElevation = 2.dp,
 				disabledElevation = 0.dp
 			),
-			border = null // Remove qualquer borda
+			border = null
 		) {
 			Column(
 				horizontalAlignment = Alignment.CenterHorizontally,
 				verticalArrangement = Arrangement.Center,
-				modifier = Modifier.padding(vertical = 8.dp)
+				modifier = Modifier.padding(vertical = 6.dp)
 			) {
 				val buttonText = if (floor == "Térreo") {
 					"Térreo"
@@ -335,20 +345,32 @@ private fun FloorButton(
 
 				Text(
 					text = buttonText,
-					fontSize = 24.sp,
+					fontSize = 20.sp,
 					fontWeight = FontWeight.Bold,
 					color = Color.White
 				)
 
-				// Mostra "elevador aqui" quando o elevador está neste andar
+				// Mostra "elevador aqui" sublinhado em verde sempre que o elevador está neste andar
 				if (isElevatorHere) {
-					Spacer(modifier = Modifier.height(4.dp))
-					Text(
-						text = "elevador aqui",
-						fontSize = 13.sp,
-						fontWeight = FontWeight.Normal,
-						color = Color(0xFF8B9BB3)
-					)
+					Spacer(modifier = Modifier.height(3.dp))
+					Box(
+						modifier = Modifier
+							.background(
+								color = Color(0xFF00FF88).copy(alpha = 0.2f),
+								shape = RoundedCornerShape(4.dp)
+							)
+							.padding(horizontal = 8.dp, vertical = 2.dp)
+					) {
+						Text(
+							text = "elevador aqui",
+							fontSize = 12.sp,
+							fontWeight = FontWeight.SemiBold,
+							color = Color(0xFF00FF88),
+							style = androidx.compose.ui.text.TextStyle(
+								textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+							)
+						)
+					}
 				}
 			}
 		}
