@@ -2,38 +2,39 @@ package com.elevox.app.data
 
 import com.elevox.app.net.ApiClient
 import com.elevox.app.net.DadosRequest
+import com.elevox.app.net.ElevatorStatus
 
 class CommandRepository {
 	/**
 	 * Envia requisição com andar atual e andar de destino
-	 * São enviados como duas requisições separadas conforme especificado
+	 * Envia uma única requisição com ambos os andares no formato JSON esperado pelo ESP32
 	 */
 	suspend fun sendFloorRequest(
 		currentFloor: Int,
 		targetFloor: Int
 	): Result<Unit> = runCatching {
-		// Primeira requisição: envia andar atual
-		val currentFloorRequest = DadosRequest(valor = currentFloor)
-		val currentResp = ApiClient.dadosApi.send(currentFloorRequest)
-		if (!currentResp.isSuccessful) {
-			error("Falha ao enviar andar atual. HTTP ${currentResp.code()}")
-		}
-
-		// Segunda requisição: envia andar de destino
-		val targetFloorRequest = DadosRequest(valor = targetFloor)
-		val targetResp = ApiClient.dadosApi.send(targetFloorRequest)
-		if (!targetResp.isSuccessful) {
-			error("Falha ao enviar andar de destino. HTTP ${targetResp.code()}")
+		// Envia uma única requisição com currentFloor e targetFloor
+		val request = DadosRequest(
+			currentFloor = currentFloor,
+			targetFloor = targetFloor
+		)
+		val response = ApiClient.dadosApi.send(request)
+		if (!response.isSuccessful) {
+			error("Falha ao enviar comando. HTTP ${response.code()}")
 		}
 	}
 
 	/**
-	 * Método legado de teste - mantido para compatibilidade
+	 * Consulta a posição atual do elevador no ESP32
+	 * Retorna a posição REAL do elevador (onde está fisicamente)
 	 */
-	suspend fun ping(): Result<Unit> = runCatching {
-		val body = DadosRequest(valor = 123)
-		val resp = ApiClient.dadosApi.send(body)
-		if (!resp.isSuccessful) error("HTTP ${resp.code()}")
+	suspend fun getElevatorStatus(): Result<ElevatorStatus> = runCatching {
+		val response = ApiClient.statusApi.getStatus()
+		if (response.isSuccessful) {
+			response.body() ?: error("Resposta vazia do servidor")
+		} else {
+			error("Falha ao consultar status. HTTP ${response.code()}")
+		}
 	}
 }
 

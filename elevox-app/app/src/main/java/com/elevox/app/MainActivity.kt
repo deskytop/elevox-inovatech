@@ -2,10 +2,14 @@ package com.elevox.app
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.elevox.app.bluetooth.BluetoothPermissionHelper
@@ -57,6 +64,9 @@ class MainActivity : ComponentActivity() {
 
 		// Registra token FCM para receber comandos da Alexa via push notifications
 		registerFCMToken()
+
+		// Verifica otimização de bateria
+		checkBatteryOptimization()
 	}
 
 	/**
@@ -127,6 +137,58 @@ class MainActivity : ComponentActivity() {
 				.addOnFailureListener { e ->
 					android.util.Log.e("MainActivity", "❌ Erro ao salvar token: ${e.message}")
 				}
+		}
+	}
+
+	/**
+	 * Verifica se a otimização de bateria está ativa e pede para desabilitar
+	 * IMPORTANTE: Necessário para receber comandos da Alexa com app fechado
+	 */
+	private fun checkBatteryOptimization() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+			val packageName = packageName
+			val isIgnoringBatteryOptimizations = powerManager.isIgnoringBatteryOptimizations(packageName)
+
+			android.util.Log.d("MainActivity", "🔋 Ignorando otimização de bateria: $isIgnoringBatteryOptimizations")
+
+			// Se ainda não pediu para desativar, pede agora
+			if (!isIgnoringBatteryOptimizations) {
+				val hasAskedBefore = prefs.getBoolean("battery_optimization_asked", false)
+
+				if (!hasAskedBefore) {
+					android.util.Log.d("MainActivity", "⚠️ Primeira vez - mostrando dialog de otimização de bateria")
+					// Marca que já perguntou (para não perguntar toda vez)
+					prefs.edit().putBoolean("battery_optimization_asked", true).apply()
+
+					// Abre configurações de otimização de bateria após 2 segundos
+					android.os.Handler(mainLooper).postDelayed({
+						showBatteryOptimizationDialog()
+					}, 2000)
+				}
+			}
+		}
+	}
+
+	/**
+	 * Abre as configurações de otimização de bateria
+	 */
+	private fun showBatteryOptimizationDialog() {
+		try {
+			val intent = Intent()
+			intent.action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+			intent.data = Uri.parse("package:$packageName")
+			startActivity(intent)
+			android.util.Log.d("MainActivity", "✅ Abrindo configurações de otimização de bateria")
+		} catch (e: Exception) {
+			android.util.Log.e("MainActivity", "❌ Erro ao abrir configurações: ${e.message}")
+			// Fallback: abre configurações gerais de otimização
+			try {
+				val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+				startActivity(intent)
+			} catch (e2: Exception) {
+				android.util.Log.e("MainActivity", "❌ Erro no fallback: ${e2.message}")
+			}
 		}
 	}
 }

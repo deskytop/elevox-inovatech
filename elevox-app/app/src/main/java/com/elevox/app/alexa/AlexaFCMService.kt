@@ -1,9 +1,15 @@
 package com.elevox.app.alexa
 
+import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Serviço FCM para receber comandos da Alexa via Push Notifications
@@ -31,23 +37,36 @@ class AlexaFCMService : FirebaseMessagingService() {
 
 	/**
 	 * Chamado quando uma mensagem FCM é recebida (comando da Alexa)
+	 * IMPORTANTE: Este método roda MESMO com o app fechado - o Android acorda o serviço
 	 */
 	override fun onMessageReceived(remoteMessage: RemoteMessage) {
 		super.onMessageReceived(remoteMessage)
 
-		Log.i(TAG, "📨 Push notification recebida da Alexa")
+		Log.i(TAG, "📨 Push notification recebida da Alexa (app pode estar fechado)")
+
+		// Adquire WakeLock para garantir que o dispositivo não durma durante o processamento
+		val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+		val wakeLock = powerManager.newWakeLock(
+			PowerManager.PARTIAL_WAKE_LOCK,
+			"Elevox::AlexaCommandWakeLock"
+		)
+		wakeLock.acquire(10000) // 10 segundos - tempo suficiente para processar
 
 		// Extrai dados do comando
 		val data = remoteMessage.data
 
 		if (data.isEmpty()) {
 			Log.w(TAG, "⚠️ Mensagem sem dados")
+			wakeLock.release()
 			return
 		}
 
 		try {
 			// Parse do comando
-			val commandId = data["commandId"] ?: return
+			val commandId = data["commandId"] ?: run {
+				wakeLock.release()
+				return
+			}
 			val type = parseCommandType(data["type"])
 			val currentFloor = data["currentFloor"]?.toIntOrNull() ?: 0
 			val targetFloor = data["targetFloor"]?.toIntOrNull()
@@ -68,15 +87,29 @@ class AlexaFCMService : FirebaseMessagingService() {
 			Log.i(TAG, "  Andar atual: ${command.currentFloor}")
 			Log.i(TAG, "  Andar destino: ${command.targetFloor ?: "N/A"}")
 
-			// Processa o comando
+			// Processa o comando DIRETAMENTE (funciona com app fechado)
 			val processor = AlexaCommandProcessor(this)
 			processor.processCommand(command)
 
 			// Marca como processado no Firebase (opcional)
 			markAsProcessed(commandId)
 
+			Log.i(TAG, "✅ Comando processado com sucesso (app em background)")
+
+			// Aguarda um pouco para garantir que o comando foi enviado
+			CoroutineScope(Dispatchers.IO).launch {
+				delay(3000) // 3 segundos para garantir envio
+				if (wakeLock.isHeld) {
+					wakeLock.release()
+					Log.d(TAG, "🔓 WakeLock liberado após processamento")
+				}
+			}
+
 		} catch (e: Exception) {
 			Log.e(TAG, "❌ Erro ao processar comando FCM: ${e.message}", e)
+			if (wakeLock.isHeld) {
+				wakeLock.release()
+			}
 		}
 	}
 

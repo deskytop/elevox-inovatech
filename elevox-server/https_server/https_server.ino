@@ -476,11 +476,53 @@ void handleDados(HTTPRequest *req, HTTPResponse *res) {
     Serial.println(bodyStr);
     Serial.println("=================================");
 
-    Serial1.println(bodyStr); // Envia para o Arduino Mega
+    // Parse JSON para extrair currentFloor e targetFloor
+    DynamicJsonDocument doc(512);
+    DeserializationError error = deserializeJson(doc, bodyStr);
+
+    if (error) {
+      Serial.print("❌ Erro ao parsear JSON: ");
+      Serial.println(error.c_str());
+      res->setStatusCode(400);
+      res->setStatusText("Bad Request");
+      res->println("❌ JSON inválido");
+      return;
+    }
+
+    // Extrai andares
+    int currentFloor = doc["currentFloor"] | 0;  // Default 0 se não existir
+    int targetFloor = doc["targetFloor"] | 0;
+
+    Serial.printf("📍 Andar atual: %d\n", currentFloor);
+    Serial.printf("🎯 Andar destino: %d\n", targetFloor);
+
+    // Valida andares (0 a 3)
+    if (currentFloor < 0 || currentFloor > 3 || targetFloor < 0 || targetFloor > 3) {
+      Serial.println("❌ Andares inválidos (devem ser 0-3)");
+      res->setStatusCode(400);
+      res->setStatusText("Bad Request");
+      res->println("❌ Andares devem ser entre 0 e 3");
+      return;
+    }
+
+    // Cria JSON para enviar ao Arduino
+    DynamicJsonDocument docArduino(200);
+    docArduino["currentFloor"] = currentFloor;
+    docArduino["targetFloor"] = targetFloor;
+
+    Serial.print("📤 Enviando JSON para Arduino: ");
+    serializeJson(docArduino, Serial);
+    Serial.println();
+
+    // Envia via Serial1 para o Arduino
+    serializeJson(docArduino, Serial1);
+    Serial1.println();
+
+    Serial.println("✅ Comando JSON enviado ao Arduino");
 
     res->setStatusCode(200);
     res->setStatusText("OK");
-    res->println("✅ JSON recebido com sucesso!");
+    res->println("✅ Comando enviado ao elevador!");
   } else {
     res->setStatusCode(405);
     res->setStatusText("Method Not Allowed");
@@ -491,7 +533,8 @@ void handleDados(HTTPRequest *req, HTTPResponse *res) {
 // ====================== SETUP ======================
 void setup() {
   Serial.begin(115200);
-  Serial1.begin(9600);
+  // Serial1: RX=16 (conecta ao TX1/18 do Arduino), TX=15 (conecta ao RX1/19 do Arduino)
+  Serial1.begin(9600, SERIAL_8N1, 16, 15);
 
   // Monta LittleFS
   if (!mountLittleFS()) {
@@ -529,6 +572,7 @@ void setup() {
   // Registra rotas
   secureServer->registerNode(new ResourceNode("/", "GET", &handleRoot));
   secureServer->registerNode(new ResourceNode("/dados", "POST", &handleDados));
+  secureServer->registerNode(new ResourceNode("/status", "GET", &handleStatus));
 
   // Inicia servidor HTTPS
   secureServer->start();
@@ -536,11 +580,72 @@ void setup() {
   Serial.println("\n💡 Digite 'help' no Monitor Serial para ver comandos disponíveis.");
 }
 
+// ====================== POSIÇÃO DO ELEVADOR (ARMAZENAMENTO LOCAL) ======================
+// Variáveis globais para armazenar a posição atual do elevador (SEM FIREBASE!)
+int elevadorPosicaoAtual = 0; // 0 = Térreo, 1 = 1º Andar, 2 = 2º Andar, 3 = 3º Andar
+String elevadorStatus = "stopped"; // "stopped", "moving", "arrived"
+unsigned long elevadorUltimaAtualizacao = 0;
+
+/**
+ * Lê mensagens JSON do Arduino via Serial2 e armazena em memória
+ * Arduino envia: {"currentFloor":X,"status":"arrived"}
+ * NÃO USA FIREBASE - apenas memória local do ESP32
+ */
+void lerPosicaoDoArduino() {
+  if (Serial1.available()) {
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, Serial1);
+
+    if (!error) {
+      int currentFloor = doc["currentFloor"] | -1;
+      const char* status = doc["status"] | "unknown";
+
+      if (currentFloor >= 0 && currentFloor <= 3) {
+        Serial.printf("📍 Arduino reportou posição: Andar %d (%s)\n", currentFloor, status);
+
+        // Armazena em memória local do ESP32 (não precisa de Firebase!)
+        elevadorPosicaoAtual = currentFloor;
+        elevadorStatus = String(status);
+        elevadorUltimaAtualizacao = millis();
+
+        Serial.printf("✅ Posição armazenada em memória: Andar %d\n", currentFloor);
+      }
+    }
+  }
+}
+
+/**
+ * Endpoint GET /status
+ * Retorna a posição atual do elevador para o app Android
+ * App pode consultar a qualquer momento via HTTPS
+ */
+void handleStatus(HTTPRequest *req, HTTPResponse *res) {
+  res->setHeader("Content-Type", "application/json; charset=utf-8");
+  res->setHeader("Access-Control-Allow-Origin", "*");
+
+  // Cria JSON com a posição atual
+  DynamicJsonDocument doc(256);
+  doc["currentFloor"] = elevadorPosicaoAtual;
+  doc["status"] = elevadorStatus;
+  doc["lastUpdate"] = elevadorUltimaAtualizacao;
+
+  String jsonStr;
+  serializeJson(doc, jsonStr);
+
+  res->setStatusCode(200);
+  res->print(jsonStr);
+
+  Serial.printf("📤 Status enviado para app: Andar %d (%s)\n", elevadorPosicaoAtual, elevadorStatus.c_str());
+}
+
 // ====================== LOOP ======================
 void loop() {
   // Processa comandos do Monitor Serial
   processSerialCommand();
-  
+
+  // Lê posição atual do Arduino e atualiza Firebase
+  lerPosicaoDoArduino();
+
   // Loop do servidor HTTPS
   if (secureServer != nullptr) {
     secureServer->loop();

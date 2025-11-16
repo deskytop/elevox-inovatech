@@ -55,6 +55,7 @@ class HomeViewModel(
 	private val bluetoothScanner = BluetoothScanner(context)
 	private val floorDetector = FloorDetector()
 	private var scanJob: Job? = null
+	private var pollingJob: Job? = null
 
 	companion object {
 		private const val TAG = "HomeViewModel"
@@ -62,22 +63,18 @@ class HomeViewModel(
 		private const val MANUAL_FLOOR_KEY = "manual_floor"
 		private const val DETECTED_FLOOR_KEY = "detected_floor"
 		private const val LAST_DETECTION_TIME_KEY = "last_detection_time"
+		private const val POLLING_INTERVAL_MS = 2000L // 2 segundos
 	}
 
 	init {
 		// Carrega andar inicial das configurações
 		loadCurrentFloorFromSettings()
+
+		// Inicia detecção da posição da pessoa (Bluetooth)
 		startFloorDetection()
 
-		// PARA TESTAR: Descomente uma das linhas abaixo para simular diferentes cenários
-		// Cenário 1: Pessoa no Térreo, Elevador no Térreo (mesma posição)
-		// _state.value = _state.value.copy(currentFloorNumeric = 0, elevatorFloorNumeric = 0)
-
-		// Cenário 2: Pessoa no 1° andar, Elevador no Térreo (posições diferentes)
-		// _state.value = _state.value.copy(currentFloorNumeric = 1, elevatorFloorNumeric = 0)
-
-		// Cenário 3: Pessoa no 2° andar, Elevador no 3° andar
-		// _state.value = _state.value.copy(currentFloorNumeric = 2, elevatorFloorNumeric = 3)
+		// Inicia polling da posição do elevador (ESP32)
+		startElevatorPolling()
 	}
 
 	/**
@@ -115,6 +112,36 @@ class HomeViewModel(
 
 				// Aguarda intervalo entre scans
 				delay(FloorBeaconConfig.SCAN_INTERVAL_MS)
+			}
+		}
+	}
+
+	/**
+	 * Inicia polling contínuo para consultar a posição do elevador no ESP32
+	 * Consulta GET /status a cada 2 segundos
+	 */
+	private fun startElevatorPolling() {
+		pollingJob?.cancel()
+		pollingJob = viewModelScope.launch {
+			while (isActive) {
+				try {
+					val result = repository.getElevatorStatus()
+					if (result.isSuccess) {
+						val status = result.getOrNull()
+						if (status != null) {
+							// Atualiza posição do elevador na UI
+							_state.value = _state.value.copy(elevatorFloorNumeric = status.currentFloor)
+							Log.d(TAG, "📍 Posição do elevador atualizada: Andar ${status.currentFloor} (${status.status})")
+						}
+					} else {
+						Log.w(TAG, "⚠️ Erro ao consultar status do elevador: ${result.exceptionOrNull()?.message}")
+					}
+				} catch (e: Exception) {
+					Log.e(TAG, "❌ Exceção no polling: ${e.message}", e)
+				}
+
+				// Aguarda intervalo entre consultas
+				delay(POLLING_INTERVAL_MS)
 			}
 		}
 	}
@@ -253,12 +280,13 @@ class HomeViewModel(
 	}
 
 	/**
-	 * Cancela scan quando ViewModel é destruído
+	 * Cancela scan e polling quando ViewModel é destruído
 	 */
 	override fun onCleared() {
 		super.onCleared()
 		scanJob?.cancel()
-		Log.d(TAG, "🛑 ViewModel destruído, scan Bluetooth cancelado")
+		pollingJob?.cancel()
+		Log.d(TAG, "🛑 ViewModel destruído, scan Bluetooth e polling cancelados")
 	}
 }
 

@@ -11,6 +11,7 @@ import okhttp3.tls.HandshakeCertificates
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.Response
 import java.security.cert.CertificateFactory
@@ -18,12 +19,24 @@ import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 
 data class DadosRequest(
-	val valor: Int
+	val currentFloor: Int,
+	val targetFloor: Int
+)
+
+data class ElevatorStatus(
+	val currentFloor: Int,
+	val status: String,
+	val lastUpdate: Long
 )
 
 interface DadosApi {
 	@POST("dados")
 	suspend fun send(@Body body: DadosRequest): Response<Unit>
+}
+
+interface StatusApi {
+	@GET("status")
+	suspend fun getStatus(): Response<ElevatorStatus>
 }
 
 object ApiClient {
@@ -99,5 +112,6 @@ object ApiClient {
 	}
 
 	val dadosApi: DadosApi by lazy { retrofit.create(DadosApi::class.java) }
+	val statusApi: StatusApi by lazy { retrofit.create(StatusApi::class.java) }
 }
 

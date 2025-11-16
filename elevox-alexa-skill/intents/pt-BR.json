@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "controle elevox",
+      "invocationName": "elevador inteligente",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
