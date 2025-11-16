@@ -28,14 +28,14 @@ data class HomeUiState(
 	val currentFloorNumber: String
 		get() = when (currentFloorNumeric) {
 			0 -> "Térreo"
-			else -> "${currentFloorNumeric}°"
+			else -> "${currentFloorNumeric}º"
 		}
 
 	// Formatação do andar do elevador para exibição
 	val elevatorFloorNumber: String
 		get() = when (elevatorFloorNumeric) {
 			0 -> "Térreo"
-			else -> "${elevatorFloorNumeric}°"
+			else -> "${elevatorFloorNumeric}º"
 		}
 
 	// Verifica se o elevador está no mesmo andar que a pessoa
@@ -212,7 +212,7 @@ class HomeViewModel(
 	private fun formatFloorName(floor: Int): String {
 		return when (floor) {
 			0 -> "Térreo"
-			else -> "${floor}° andar"
+			else -> "${floor}º andar"
 		}
 	}
 
@@ -241,7 +241,7 @@ class HomeViewModel(
 
 			val floorName = when (targetFloor) {
 				0 -> "Térreo"
-				else -> "${targetFloor}° andar"
+				else -> "${targetFloor}º andar"
 			}
 
 			_state.value = if (result.isSuccess) {

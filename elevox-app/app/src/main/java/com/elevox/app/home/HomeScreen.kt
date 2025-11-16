@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -119,7 +120,10 @@ fun HomeScreen(
 					Column(
 						modifier = Modifier
 							.fillMaxWidth()
-							.padding(vertical = 24.dp),
+							.padding(vertical = 24.dp)
+							.clearAndSetSemantics {
+								contentDescription = "Você está em: ${state.currentFloorNumber}"
+							},
 						horizontalAlignment = Alignment.CenterHorizontally,
 						verticalArrangement = Arrangement.spacedBy(10.dp)
 					) {
@@ -221,7 +225,7 @@ fun HomeScreen(
 					modifier = Modifier.fillMaxWidth()
 				) {
 					FloorButton(
-						floor = "3°",
+						floor = "3º",
 						floorNumber = 3,
 						isCurrentFloor = state.currentFloorNumeric == 3,
 						isElevatorHere = state.elevatorFloorNumeric == 3,
@@ -229,7 +233,7 @@ fun HomeScreen(
 						onClick = { viewModel.onFloorSelected(3) }
 					)
 					FloorButton(
-						floor = "2°",
+						floor = "2º",
 						floorNumber = 2,
 						isCurrentFloor = state.currentFloorNumeric == 2,
 						isElevatorHere = state.elevatorFloorNumeric == 2,
@@ -237,7 +241,7 @@ fun HomeScreen(
 						onClick = { viewModel.onFloorSelected(2) }
 					)
 					FloorButton(
-						floor = "1°",
+						floor = "1º",
 						floorNumber = 1,
 						isCurrentFloor = state.currentFloorNumeric == 1,
 						isElevatorHere = state.elevatorFloorNumeric == 1,
