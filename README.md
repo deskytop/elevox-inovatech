@@ -7,7 +7,7 @@ Sistema IoT para controle de elevadores usando ESP32 e aplicativo Android com co
 
 ---
 
-## 🌐 ([Nosso Site])(https://elevox.vercel.app/))
+## 🌐 ([Nosso Site](https://elevox.vercel.app/))
 
 ---
 
