@@ -1,4 +1,4 @@
-# 🏢 Elevox - Sistema de Controle de Elevador via HTTPS
+# 🏢 Elevox - Sistema de Controle de Elevador
 
 Sistema IoT para controle de elevadores usando ESP32 e aplicativo Android com comunicação segura HTTPS.
 
@@ -7,17 +7,7 @@ Sistema IoT para controle de elevadores usando ESP32 e aplicativo Android com co
 
 ---
 
-## 📋 Índice
-
-- [Visão Geral](#-visão-geral)
-- [Arquitetura](#-arquitetura)
-- [Segurança](#-segurança)
-- [Integração Alexa](#-integração-alexa)
-- [Pré-requisitos](#-pré-requisitos)
-- [Instalação](#-instalação)
-- [Uso](#-uso)
-- [Scripts](#-scripts)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
+## 🌐 ([Nosso Site])(https://elevox.vercel.app/))
 
 ---
 
@@ -72,7 +62,6 @@ O projeto implementa múltiplas camadas de segurança:
 - **Auto-signed Certificates** - Certificados gerados localmente
 - **Hostname Verification** - Validação do hostname do servidor
 - **Timeouts Agressivos** - 5s connect, 10s read
-- **Sensitive Data Protection** - `.gitignore` robusto
 
 ### 📖 Documentação
 
@@ -96,19 +85,6 @@ Alexa → AWS Lambda → Firebase → App Android → ESP32
 - **"Alexa, pede Elevox para chamar o elevador"** - Chama elevador
 - **"Alexa, pede Elevox para ir para o andar cinco"** - Vai para andar específico
 
-### Documentação Completa
-
-Veja o guia completo em: [elevox-alexa-skill/README.md](elevox-alexa-skill/README.md)
-
-**Guia Rápido (30 min)**: [elevox-alexa-skill/QUICKSTART.md](elevox-alexa-skill/QUICKSTART.md)
-
-### Custos
-
-✅ **Totalmente GRATUITO** (dentro do Free Tier):
-- AWS Lambda: 1 milhão requisições/mês grátis
-- Firebase: 1 GB + 10 GB download/mês grátis
-- Alexa Skills: Sempre gratuito
-
 ---
 
 ## 📦 Pré-requisitos
@@ -131,57 +107,6 @@ Veja o guia completo em: [elevox-alexa-skill/README.md](elevox-alexa-skill/READM
 
 - **Python 3.7+** (para scripts utilitários)
 - **OpenSSL** (para geração de certificados)
-
----
-
-## 🚀 Instalação
-
-### 1. Clone o Repositório
-
-```bash
-git clone https://github.com/seu-usuario/elevox.git
-cd elevox
-```
-
-### 2. Configure o ESP32
-
-```bash
-# 1. Gere certificados SSL
-cd scripts
-python gerar_cert_esp32.py
-
-# 2. Configure WiFi
-cd ../elevox-server/https_server/data
-cp wifi_config.json.example wifi_config.json
-# Edite wifi_config.json com suas credenciais
-
-# 3. Faça upload do código
-# No Arduino IDE: Sketch → Upload
-# E depois: Tools → ESP32 Sketch Data Upload
-```
-
-ou siga instruções: https://randomnerdtutorials.com/arduino-ide-2-install-esp32-littlefs/
-
-### 3. Configure o App Android
-
-```bash
-cd elevox-app
-
-# 1. Configure local.properties
-cp local.properties.example local.properties
-# Edite com o IP do ESP32
-
-# 2. Copie o certificado
-cd ../scripts
-python copiar_cert_para_app.py
-
-# 3. Compile o app
-cd ../elevox-app
-./gradlew :app:assembleDebug
-
-# 4. Instale no dispositivo
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
 
 ---
 
@@ -230,82 +155,4 @@ Os scripts na pasta `scripts/` auxiliam na configuração:
 Ver [scripts/README.md](scripts/README.md) para documentação completa.
 
 ---
-
-## 📁 Estrutura do Projeto
-
-```
-elevox/
-├── elevox-app/                 # Aplicativo Android
-│   ├── app/
-│   │   ├── src/main/
-│   │   │   ├── java/com/elevox/app/
-│   │   │   │   ├── net/        # Camada de rede (HTTPS)
-│   │   │   │   ├── data/       # Repositórios
-│   │   │   │   ├── home/       # UI Principal
-│   │   │   │   └── ...
-│   │   │   └── res/
-│   │   │       ├── raw/        # Certificados (esp.crt)
-│   │   │       └── ...
-│   │   └── build.gradle.kts
-│   ├── local.properties        # Config local (gitignored)
-│   └── AGENTS.md               # Guia de desenvolvimento
-│
-├── elevox-server/              # Servidor ESP32
-│   └── https_server/
-│       ├── https_server.ino    # Código principal
-│       ├── data/               # Dados do LittleFS (gitignored)
-│       │   ├── server.crt      # Certificado SSL
-│       │   ├── server.key      # Chave privada
-│       │   └── wifi_config.json
-│       └── data-example/       # Templates (commitados)
-│
-├── scripts/                    # Scripts utilitários
-│   ├── README.md
-│   ├── gerar_cert_esp32.py
-│   ├── copiar_cert_para_app.py
-│   └── fix_certificates.py
-│
-├── .gitignore                  # Proteção de arquivos sensíveis
-└── README.md                   # Este arquivo
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Erro: `mbedtls_x509_crt_parse returned -0x2180`
-
-**Causa:** Formato incorreto de certificado (PEM vs DER)
-
-**Solução:**
-```bash
-cd scripts
-python fix_certificates.py
-# Escolha opção 2 para corrigir
-```
-
-### App não conecta ao ESP32
-
-**Checklist:**
-- [ ] ESP32 e smartphone na mesma rede WiFi
-- [ ] IP correto no `local.properties`
-- [ ] Certificado `esp.crt` copiado para o app
-- [ ] ESP32 mostra "Servidor HTTPS iniciado"
-
-### Monitor Serial mostra erro ao carregar certificados
-
-```bash
-# No Monitor Serial (115200 baud):
-check
-
-# Deve mostrar:
-# ✅ Certificados validados como PEM
-# ✅ Conversão PEM→DER bem-sucedida
-```
-
----
-
-
-
-
 

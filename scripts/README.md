@@ -90,11 +90,7 @@ python gerar_cert_esp32.py
    - Adequados para desenvolvimento
    - **NÃO use em produção** sem certificados válidos
 
-2. **Arquivos sensíveis:**
-   - `server.key` - **NUNCA commitar no Git**
-   - `esp.crt` - **NUNCA commitar no Git**
-
-3. **Chaves privadas:**
+2. **Chaves privadas:**
    - Mantidas localmente
    - Não compartilhar por canais inseguros
    - Regenerar se comprometidas
@@ -175,5 +171,8 @@ python3 script.py
 ```
 
 ---
+
+
+
 
 
