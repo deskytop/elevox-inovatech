@@ -9,8 +9,6 @@ Sistema IoT para controle de elevadores usando ESP32 e aplicativo Android com co
 
 ## 🌐 [WebSite](https://elevox.vercel.app/)
 
----
-
 ## 🎯 Visão Geral
 
 O **Elevox** é um sistema de controle de elevadores que permite:
@@ -48,8 +46,33 @@ O **Elevox** é um sistema de controle de elevadores que permite:
                                        │                 │
                                        └─────────────────┘
 ```
+### 📁 Pastas
+Pasta > elevox-alexa-skill
+Arquivos da programação da integração com alexa
+
+Pasta > elevox-app
+Arquivos da programação do aplicativo mobile
+
+Pasta > elevox-server
+Arquivos da programação do servidor https do ESP32, voltado para comunicação sem fio
 
 ---
+
+## 🤖 Aplicativo
+
+Visual inicial do app:
+
+![Exemplo 1](assets/img/inicial.jpeg)
+
+Página de configurações no modo automático:
+
+![Exemplo 2](assets/img/config-auto.jpeg)
+
+Página de configurações no modo manual:
+
+![Exemplo 3](assets/img/config-manual.jpeg)
+
+Totalmente responsivo e funcional com o talkback!
 
 ## 🔒 Segurança
 
@@ -59,7 +82,6 @@ O projeto implementa múltiplas camadas de segurança:
 
 - **HTTPS (TLS 1.2+)** - Toda comunicação criptografada
 - **Certificate Pinning** - SPKI SHA-256 no app
-- **Auto-signed Certificates** - Certificados gerados localmente
 - **Hostname Verification** - Validação do hostname do servidor
 - **Timeouts Agressivos** - 5s connect, 10s read
 
